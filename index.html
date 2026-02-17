@@ -5,28 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#E4405F">
-    <title>RealPulse | Authentic News</title>
+    <title>RealPulse | Editor Dashboard Integrated</title>
     <style>
         :root { --primary: #E4405F; --bg: #f0f2f5; --card-bg: #ffffff; --text-main: #1a1a1a; --text-sec: #4b4d50; --nav-height: 165px; }
         [data-theme="dark"] { --bg: #121212; --card-bg: #1e1e1e; --text-main: #e0e0e0; --text-sec: #b0b0b0; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text-main); line-height: 1.5; overflow-x: hidden; }
+        
+        /* --- Header & Layout --- */
         header { position: fixed; top: 0; width: 100%; background: var(--card-bg); z-index: 1000; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
         .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid rgba(128,128,128,0.1); }
         .logo { font-size: 24px; font-weight: 800; color: var(--primary); letter-spacing: -1px; cursor: pointer; }
         .logo span { color: var(--text-main); }
         .header-controls { display: flex; align-items: center; gap: 8px; }
         .control-btn { background: var(--bg); color: var(--text-main); border: 1px solid rgba(128,128,128,0.2); padding: 6px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; cursor: pointer; }
+        
         .ticker-wrap { background: #000; color: #fff; height: 35px; overflow: hidden; display: flex; align-items: center; }
         .ticker-label { background: var(--primary); padding: 0 15px; height: 100%; display: flex; align-items: center; font-weight: 800; font-size: 11px; z-index: 2; text-transform: uppercase; }
         .ticker-scroll { white-space: nowrap; padding-left: 100%; animation: ticker 40s linear infinite; font-size: 13px; }
         @keyframes ticker { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
+
         .category-scroll { display: flex; overflow-x: auto; padding: 10px; gap: 10px; scrollbar-width: none; }
         .cat-pill { padding: 8px 18px; background: var(--bg); border-radius: 20px; font-size: 12px; white-space: nowrap; cursor: pointer; border: none; font-weight: 600; color: var(--text-sec); }
         .cat-pill.active { background: var(--primary); color: #fff; }
+
+        /* --- Main Feed --- */
         #main-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; }
         .pulse-text { font-size: 36px; font-weight: 900; color: var(--primary); animation: pulseAnim 1.2s infinite ease-in-out; }
         @keyframes pulseAnim { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); opacity: 0.8; } }
+        
         .main-layout { display: flex; justify-content: center; margin-top: var(--nav-height); padding: 15px; padding-bottom: 100px; }
         #news-feed { width: 100%; max-width: 650px; }
         .news-card { background: var(--card-bg); border-radius: 12px; margin-bottom: 24px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -34,14 +41,23 @@
         .news-info { padding: 15px; }
         .news-title { font-size: 18px; font-weight: 800; color: var(--text-main); text-decoration: none; display: block; margin-bottom: 8px; }
         .news-desc { font-size: 14px; color: var(--text-sec); display: block; margin-bottom: 15px; }
-        .card-actions { display: flex; justify-content: space-between; border-top: 1px solid rgba(128,128,128,0.1); padding-top: 12px; }
-        .read-more-btn { background: var(--primary); color: #fff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 700; }
+
+        /* --- Editor Dashboard Modal --- */
+        #editor-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10001; padding: 20px; overflow-y: auto; }
+        .editor-box { background: var(--card-bg); max-width: 500px; margin: auto; padding: 20px; border-radius: 15px; }
+        .editor-box input, .editor-box textarea, .editor-box select { width: 100%; margin-bottom: 10px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; background: var(--bg); color: var(--text-main); }
+        .manage-section { margin-top: 20px; border-top: 1px solid var(--primary); padding-top: 10px; }
+        .manage-item { display: flex; justify-content: space-between; padding: 8px; background: var(--bg); margin-bottom: 5px; border-radius: 5px; font-size: 12px; }
+        
+        /* --- Footer --- */
         footer { position: fixed; bottom: 0; width: 100%; background: var(--card-bg); border-top: 1px solid rgba(128,128,128,0.2); display: flex; justify-content: space-around; padding: 10px; z-index: 1000; }
         .footer-btn { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: var(--text-sec); border: none; background: none; cursor: pointer; flex: 1; }
     </style>
 </head>
 <body data-theme="light">
+
 <div id="main-loader"><div class="pulse-text">RealPulse</div></div>
+
 <header>
     <div class="top-bar">
         <div class="logo" onclick="location.reload()">Real<span>Pulse</span></div>
@@ -50,18 +66,47 @@
             <button class="control-btn" onclick="toggleLanguage()" id="langBtn">हिंदी</button>
         </div>
     </div>
-    <div class="ticker-wrap"><div class="ticker-label">Breaking</div><div id="breakingTicker" class="ticker-scroll">Loading pulse...</div></div>
+    <div class="ticker-wrap"><div class="ticker-label">Breaking</div><div id="breakingTicker" class="ticker-scroll">Syncing authentic news...</div></div>
     <div class="category-scroll" id="catBar"></div>
 </header>
-<div class="main-layout"><main id="news-feed"><div id="feed-content"></div></main></div>
+
+<div class="main-layout">
+    <main id="news-feed">
+        <div id="feed-content"></div>
+    </main>
+</div>
+
+<div id="editor-modal">
+    <div class="editor-box">
+        <h3 id="editor-title">Editor Dashboard</h3>
+        <input type="password" id="adminPass" placeholder="Admin Key (admin123)">
+        <input type="text" id="editHeadline" placeholder="Article Headline">
+        <textarea id="editBody" placeholder="News content..." rows="4"></textarea>
+        <input type="file" id="editFile" accept="image/*" onchange="handleFile(this)">
+        <select id="editCat">
+            <option value="general">National</option>
+            <option value="technology">Tech</option>
+            <option value="sports">Sports</option>
+            <option value="business">Business</option>
+        </select>
+        <button onclick="saveArticle()" style="width:100%; padding:12px; background:var(--primary); color:white; border:none; border-radius:5px; font-weight:bold;">Publish Post</button>
+        <button onclick="closeEditor()" style="width:100%; margin-top:10px; background:none; border:none; color:var(--text-sec);">Cancel</button>
+        
+        <div class="manage-section">
+            <h4>Your Posts</h4>
+            <div id="manage-list"></div>
+        </div>
+    </div>
+</div>
+
 <footer>
     <button class="footer-btn" onclick="location.reload()">🏠<br>Home</button>
+    <button class="footer-btn" onclick="openEditor()">✍️<br>Editor</button>
     <button class="footer-btn">🔥<br>Trending</button>
-    <button class="footer-btn">🔖<br>Save</button>
 </footer>
 
 <script>
-    let state = { lang: 'en', category: 'general' };
+    let state = { lang: 'en', category: 'general', uploadedImg: null, editingIndex: null };
 
     function init() {
         renderCategories();
@@ -72,7 +117,6 @@
     function renderCategories() {
         const categories = [
             { id: 'general', en: 'National', hi: 'राष्ट्रीय' },
-            { id: 'nation', en: 'Politics', hi: 'राजनीति' },
             { id: 'technology', en: 'Tech', hi: 'तकनीकी' },
             { id: 'business', en: 'Business', hi: 'व्यापार' },
             { id: 'sports', en: 'Sports', hi: 'खेल' }
@@ -80,45 +124,89 @@
         document.getElementById('catBar').innerHTML = categories.map(c => `
             <button class="cat-pill ${state.category === c.id ? 'active' : ''}" onclick="setCategory('${c.id}')">
                 ${state.lang === 'en' ? c.en : c.hi}
-            </button>
-        `).join('');
+            </button>`).join('');
     }
 
     async function fetchNews() {
         document.getElementById('main-loader').style.display = 'flex';
-        // CALLING YOUR HIDDEN API
+        // SECURE SERVERLESS API CALL
         const apiUrl = `/api/getnews?category=${state.category}&lang=${state.lang}`;
 
         try {
             const response = await fetch(apiUrl);
             const data = await response.json();
-
             if (data.articles) {
                 renderArticles(data.articles);
                 document.getElementById('breakingTicker').innerText = data.articles.map(a => a.title).join(' • ');
-            } else {
-                throw new Error("No articles found");
             }
         } catch (err) {
-            document.getElementById('feed-content').innerHTML = `<div style="text-align:center; padding:50px;">⚠️ API Rate Limit reached. Please check back later.</div>`;
+            document.getElementById('feed-content').innerHTML = `<div style="text-align:center; padding:50px;">API Rate Limited. Showing Editor posts only.</div>`;
+            renderArticles([], false); // Still show editor posts if API fails
         } finally {
             setTimeout(() => document.getElementById('main-loader').style.display = 'none', 600);
         }
     }
 
-    function renderArticles(articles) {
-        document.getElementById('feed-content').innerHTML = articles.map(art => `
+    function renderArticles(apiArticles) {
+        // Combine API news with Editor's Local News
+        const local = JSON.parse(localStorage.getItem('rp_news') || "[]");
+        const filteredLocal = local.filter(a => a.category === state.category || state.category === 'general');
+        
+        const allArticles = [...filteredLocal, ...apiArticles];
+        
+        document.getElementById('feed-content').innerHTML = allArticles.map(art => `
             <div class="news-card">
                 <img src="${art.image || 'https://picsum.photos/600/300'}" class="news-img">
                 <div class="news-info">
-                    <div style="font-size:10px; color:var(--primary); font-weight:800;">${art.source.name}</div>
-                    <a href="${art.url}" target="_blank" class="news-title">${art.title}</a>
+                    <div style="font-size:10px; color:var(--primary); font-weight:800;">${art.source?.name || 'Editor Post'}</div>
+                    <a href="${art.url || '#'}" target="_blank" class="news-title">${art.title}</a>
                     <span class="news-desc">${art.description || ''}</span>
-                    <div class="card-actions">
-                        <a href="${art.url}" target="_blank" class="read-more-btn">Read More</a>
-                    </div>
                 </div>
             </div>`).join('');
+    }
+
+    // EDITOR LOGIC
+    function handleFile(input) {
+        const reader = new FileReader();
+        reader.onload = (e) => state.uploadedImg = e.target.result;
+        if(input.files[0]) reader.readAsDataURL(input.files[0]);
+    }
+
+    function saveArticle() {
+        if (document.getElementById('adminPass').value !== "admin123") return alert("Access Denied!");
+        const newArt = {
+            title: document.getElementById('editHeadline').value,
+            description: document.getElementById('editBody').value,
+            category: document.getElementById('editCat').value,
+            image: state.uploadedImg,
+            source: { name: "RealPulse Staff" },
+            publishedAt: new Date().toISOString()
+        };
+        let local = JSON.parse(localStorage.getItem('rp_news') || "[]");
+        if(state.editingIndex !== null) local[state.editingIndex] = newArt;
+        else local.unshift(newArt);
+        
+        localStorage.setItem('rp_news', JSON.stringify(local));
+        location.reload();
+    }
+
+    function openEditor() { document.getElementById('editor-modal').style.display = 'block'; loadManageList(); }
+    function closeEditor() { document.getElementById('editor-modal').style.display = 'none'; }
+
+    function loadManageList() {
+        const local = JSON.parse(localStorage.getItem('rp_news') || "[]");
+        document.getElementById('manage-list').innerHTML = local.map((art, idx) => `
+            <div class="manage-item">
+                <span>${art.title.substring(0,20)}...</span>
+                <button onclick="deletePost(${idx})" style="color:red; background:none; border:none;">Delete</button>
+            </div>`).join('');
+    }
+
+    function deletePost(idx) {
+        let local = JSON.parse(localStorage.getItem('rp_news') || "[]");
+        local.splice(idx, 1);
+        localStorage.setItem('rp_news', JSON.stringify(local));
+        loadManageList();
     }
 
     function setCategory(id) { state.category = id; renderCategories(); fetchNews(); }
@@ -132,6 +220,7 @@
         document.getElementById('langBtn').innerText = state.lang === 'en' ? 'हिंदी' : 'English';
         renderCategories(); fetchNews();
     }
+
     init();
 </script>
 </body>
