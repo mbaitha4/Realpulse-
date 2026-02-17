@@ -9,6 +9,8 @@
     <meta name="theme-color" content="#E4405F">
     <meta name="format-detection" content="telephone=no">
     
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    
     <title>RealPulse | Authentic News</title>
     
     <style>
@@ -29,18 +31,7 @@
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        /* Fixed body to prevent horizontal "wobble" on mobile devices */
-        body { 
-            margin: 0; 
-            font-family: 'Segoe UI', system-ui, sans-serif; 
-            background: var(--bg); 
-            color: var(--text-main); 
-            line-height: 1.5; 
-            overflow-x: hidden;
-            width: 100%;
-            position: relative;
-        }
+        body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text-main); line-height: 1.5; overflow-x: hidden; }
 
         /* --- Header --- */
         header { position: fixed; top: 0; width: 100%; background: var(--card-bg); z-index: 1000; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
@@ -57,7 +48,7 @@
         @keyframes ticker { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
 
         .category-scroll { display: flex; overflow-x: auto; padding: 10px; gap: 10px; scrollbar-width: none; }
-        .category-scroll::-webkit-scrollbar { display: none; } /* Hide scrollbar for Chrome/Safari */
+        .category-scroll::-webkit-scrollbar { display: none; }
         .cat-pill { padding: 8px 18px; background: var(--bg); border-radius: 20px; font-size: 12px; white-space: nowrap; cursor: pointer; border: none; font-weight: 600; color: var(--text-sec); transition: 0.2s; }
         .cat-pill.active { background: var(--primary); color: #fff; }
 
@@ -179,13 +170,9 @@
         `).join('');
     }
 
-    /* --- FIXED AUTHENTIC SUMMARY LOGIC --- */
     function getAuthenticSummary(text) {
         if (!text) return "";
         let trimmed = text.trim();
-        const stoppers = [". ", "! ", "? ", ".", "!", "?"];
-        const lastChar = trimmed.slice(-1);
-        if ([".", "!", "?"].includes(lastChar)) return trimmed;
         const lastStop = Math.max(trimmed.lastIndexOf('.'), trimmed.lastIndexOf('?'), trimmed.lastIndexOf('!'));
         if (lastStop !== -1 && lastStop > 15) return trimmed.substring(0, lastStop + 1);
         return trimmed.length > 50 ? trimmed.substring(0, trimmed.lastIndexOf(' ')) + "..." : trimmed;
@@ -194,15 +181,24 @@
     async function fetchNews(isLoadMore = false) {
         const loader = document.getElementById('main-loader');
         if (!isLoadMore) loader.style.display = 'flex';
+        
+        // --- PROXY FIX FOR GITHUB/VERCEL ---
+        const targetUrl = `https://gnews.io/api/v4/top-headlines?category=${state.category}&lang=${state.lang}&country=in&max=10&apikey=${API_KEY}`;
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+
         try {
-            const url = `https://gnews.io/api/v4/top-headlines?category=${state.category}&lang=${state.lang}&country=in&max=10&apikey=${API_KEY}`;
-            const response = await fetch(url);
-            const data = await response.json();
+            const response = await fetch(proxyUrl);
+            const wrapper = await response.json();
+            const data = JSON.parse(wrapper.contents);
+
             if (data.articles) {
                 renderArticles(isLoadMore ? data.articles.slice(5) : data.articles.slice(0, 5), isLoadMore);
                 document.getElementById('breakingTicker').innerText = data.articles.map(a => a.title).join(' • ');
             }
-        } catch (err) { console.log(err); }
+        } catch (err) { 
+            console.error(err);
+            document.getElementById('feed-content').innerHTML = `<div style="text-align:center; padding:20px; color:red;">⚠️ Connection Error. The API may be restricted on this host or quota exhausted.</div>`;
+        }
         finally { setTimeout(() => { loader.style.display = 'none'; }, 600); }
     }
 
