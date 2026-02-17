@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#E4405F">
+    <meta name="format-detection" content="telephone=no">
+    
+    <title>RealPulse | Authentic News</title>
+    
+    <style>
+        :root {
+            --primary: #E4405F;
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-main: #1a1a1a;
+            --text-sec: #4b4d50;
+            --nav-height: 165px;
+        }
+
+        [data-theme="dark"] {
+            --bg: #121212;
+            --card-bg: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-sec: #b0b0b0;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        /* Fixed body to prevent horizontal "wobble" on mobile devices */
+        body { 
+            margin: 0; 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            background: var(--bg); 
+            color: var(--text-main); 
+            line-height: 1.5; 
+            overflow-x: hidden;
+            width: 100%;
+            position: relative;
+        }
+
+        /* --- Header --- */
+        header { position: fixed; top: 0; width: 100%; background: var(--card-bg); z-index: 1000; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid rgba(128,128,128,0.1); }
+        .logo { font-size: 24px; font-weight: 800; color: var(--primary); letter-spacing: -1px; cursor: pointer; }
+        .logo span { color: var(--text-main); }
+        .header-controls { display: flex; align-items: center; gap: 8px; }
+        .control-btn { background: var(--bg); color: var(--text-main); border: 1px solid rgba(128,128,128,0.2); padding: 6px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; cursor: pointer; }
+
+        /* --- Ticker & Categories --- */
+        .ticker-wrap { background: #000; color: #fff; height: 35px; overflow: hidden; display: flex; align-items: center; }
+        .ticker-label { background: var(--primary); padding: 0 15px; height: 100%; display: flex; align-items: center; font-weight: 800; font-size: 11px; z-index: 2; text-transform: uppercase; }
+        .ticker-scroll { white-space: nowrap; padding-left: 100%; animation: ticker 40s linear infinite; font-size: 13px; }
+        @keyframes ticker { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
+
+        .category-scroll { display: flex; overflow-x: auto; padding: 10px; gap: 10px; scrollbar-width: none; }
+        .category-scroll::-webkit-scrollbar { display: none; } /* Hide scrollbar for Chrome/Safari */
+        .cat-pill { padding: 8px 18px; background: var(--bg); border-radius: 20px; font-size: 12px; white-space: nowrap; cursor: pointer; border: none; font-weight: 600; color: var(--text-sec); transition: 0.2s; }
+        .cat-pill.active { background: var(--primary); color: #fff; }
+
+        /* --- Loader --- */
+        #main-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .pulse-text { font-size: 36px; font-weight: 900; color: var(--primary); animation: pulseAnim 1.2s infinite ease-in-out; }
+        @keyframes pulseAnim { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); opacity: 0.8; } }
+
+        /* --- Feed --- */
+        .main-layout { display: flex; justify-content: center; margin-top: var(--nav-height); padding: 15px; padding-bottom: 100px; }
+        #news-feed { width: 100%; max-width: 650px; }
+        .news-card { background: var(--card-bg); border-radius: 12px; margin-bottom: 24px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .news-img { width: 100%; height: 260px; object-fit: cover; background: #222; }
+        .news-info { padding: 20px; }
+        .news-title { font-size: 20px; font-weight: 800; color: var(--text-main); text-decoration: none; display: block; margin-bottom: 10px; }
+        .news-desc { font-size: 15px; color: var(--text-sec); display: block; margin-bottom: 20px; text-align: justify; }
+        .card-actions { display: flex; justify-content: space-between; border-top: 1px solid rgba(128,128,128,0.1); padding-top: 15px; }
+        .read-more-btn { background: var(--primary); color: #fff; padding: 10px 20px; border-radius: 6px; border: none; font-weight: 700; text-decoration: none; font-size: 13px; }
+        .share-btn { background: var(--bg); color: var(--text-main); padding: 9px 15px; border-radius: 6px; border: 1px solid rgba(128,128,128,0.2); font-size: 13px; cursor: pointer; }
+
+        /* --- Editor Modal --- */
+        #editor-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; overflow-y: auto; padding: 20px; }
+        .editor-box { background: var(--card-bg); width: 100%; max-width: 500px; padding: 25px; border-radius: 15px; margin: auto; }
+        .editor-box input, .editor-box textarea, .editor-box select { width: 100%; margin-bottom: 12px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; background: var(--bg); color: var(--text-main); }
+        
+        .manage-section { margin-top: 25px; border-top: 2px solid var(--primary); padding-top: 15px; }
+        .manage-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg); padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 13px; }
+        .manage-btns { display: flex; gap: 5px; }
+        .edit-mini { background: #4a90e2; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .del-mini { background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+
+        /* --- Footer --- */
+        footer { position: fixed; bottom: 0; width: 100%; background: var(--card-bg); border-top: 1px solid rgba(128,128,128,0.2); display: flex; justify-content: space-around; padding: 10px; z-index: 1000; }
+        .footer-btn { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: var(--text-sec); border: none; background: none; cursor: pointer; flex: 1; }
+    </style>
+</head>
+<body data-theme="light">
+
+<div id="main-loader"><div class="pulse-text">RealPulse</div></div>
+
+<header>
+    <div class="top-bar">
+        <div class="logo" onclick="location.reload()">Real<span>Pulse</span></div>
+        <div class="header-controls">
+            <button class="control-btn" onclick="installPWA()">📲 Install</button>
+            <button class="control-btn" onclick="toggleDarkMode()">Mode 🌙</button>
+            <button class="control-btn" onclick="toggleLanguage()" id="langBtn">हिंदी</button>
+        </div>
+    </div>
+    <div class="ticker-wrap">
+        <div class="ticker-label">Breaking</div>
+        <div id="breakingTicker" class="ticker-scroll">RealPulse Journalism • Authenticity in Every Story...</div>
+    </div>
+    <div class="category-scroll" id="catBar"></div>
+</header>
+
+<div class="main-layout">
+    <main id="news-feed">
+        <div id="feed-content"></div>
+        <button id="loadMoreBtn" style="width:100%; padding:14px; border-radius:10px; border:2px solid var(--primary); background:none; color:var(--primary); font-weight:700; cursor:pointer; margin-bottom: 40px;" onclick="fetchNews(true)">Load More</button>
+    </main>
+</div>
+
+<div id="editor-modal">
+    <div class="editor-box">
+        <h3 id="editor-mode-title" style="margin-top:0;">Post News Article</h3>
+        <input type="password" id="adminPass" placeholder="Admin Key (admin123)">
+        <input type="text" id="editTitle" placeholder="Article Headline">
+        <textarea id="editDesc" placeholder="Authentic News Content" rows="4"></textarea>
+        <input type="file" id="editFile" accept="image/*" onchange="handleFile(this)">
+        <select id="editCat">
+            <option value="general">National</option>
+            <option value="nation">Politics</option>
+            <option value="technology">Tech/AI</option>
+            <option value="business">Business</option>
+            <option value="sports">Sports</option>
+            <option value="miscellaneous">Miscellaneous</option>
+        </select>
+        <button id="publishBtn" onclick="saveArticle()" style="width:100%; padding:12px; background:var(--primary); color:#fff; border:none; border-radius:8px; font-weight:700; cursor:pointer;">Publish Now</button>
+        <button onclick="closeEditor()" style="width:100%; padding:10px; background:none; border:none; color:var(--text-sec); width:100%; cursor:pointer;">Close Dashboard</button>
+
+        <div class="manage-section">
+            <h4 style="margin:0 0 10px 0;">Manage Your Posts</h4>
+            <div id="manage-list"></div>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <button class="footer-btn" onclick="location.reload()">🏠<br>Home</button>
+    <button class="footer-btn" onclick="openEditor()">👤<br>Editor</button>
+    <button class="footer-btn" onclick="alert('Trending Pulse...')">🔥<br>Trending</button>
+    <button class="footer-btn" onclick="alert('Saved to Library!')">🔖<br>Save</button>
+</footer>
+
+<script>
+    const API_KEY = "8c780a06e9a93c42dd39371a4b014548";
+    let state = { lang: 'en', category: 'general', uploadedImg: null, editingIndex: null };
+
+    function init() {
+        renderCategories();
+        fetchNews();
+        if(localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
+    }
+
+    function renderCategories() {
+        const categories = [
+            { id: 'general', en: 'National', hi: 'राष्ट्रीय' },
+            { id: 'nation', en: 'Politics', hi: 'राजनीति' },
+            { id: 'technology', en: 'Tech/AI', hi: 'टेक/AI' },
+            { id: 'business', en: 'Business', hi: 'व्यापार' },
+            { id: 'sports', en: 'Sports', hi: 'खेल' },
+            { id: 'miscellaneous', en: 'Miscellaneous', hi: 'विविध' }
+        ];
+        document.getElementById('catBar').innerHTML = categories.map(c => `
+            <button class="cat-pill ${state.category === c.id ? 'active' : ''}" onclick="setCategory('${c.id}')">
+                ${state.lang === 'en' ? c.en : c.hi}
+            </button>
+        `).join('');
+    }
+
+    /* --- FIXED AUTHENTIC SUMMARY LOGIC --- */
+    function getAuthenticSummary(text) {
+        if (!text) return "";
+        let trimmed = text.trim();
+        const stoppers = [". ", "! ", "? ", ".", "!", "?"];
+        const lastChar = trimmed.slice(-1);
+        if ([".", "!", "?"].includes(lastChar)) return trimmed;
+        const lastStop = Math.max(trimmed.lastIndexOf('.'), trimmed.lastIndexOf('?'), trimmed.lastIndexOf('!'));
+        if (lastStop !== -1 && lastStop > 15) return trimmed.substring(0, lastStop + 1);
+        return trimmed.length > 50 ? trimmed.substring(0, trimmed.lastIndexOf(' ')) + "..." : trimmed;
+    }
+
+    async function fetchNews(isLoadMore = false) {
+        const loader = document.getElementById('main-loader');
+        if (!isLoadMore) loader.style.display = 'flex';
+        try {
+            const url = `https://gnews.io/api/v4/top-headlines?category=${state.category}&lang=${state.lang}&country=in&max=10&apikey=${API_KEY}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            if (data.articles) {
+                renderArticles(isLoadMore ? data.articles.slice(5) : data.articles.slice(0, 5), isLoadMore);
+                document.getElementById('breakingTicker').innerText = data.articles.map(a => a.title).join(' • ');
+            }
+        } catch (err) { console.log(err); }
+        finally { setTimeout(() => { loader.style.display = 'none'; }, 600); }
+    }
+
+    function renderArticles(articles, append = false, isLocal = false) {
+        const feed = document.getElementById('feed-content');
+        const html = articles.map(art => {
+            const summary = isLocal ? art.description : getAuthenticSummary(art.description || art.content);
+            return `
+            <div class="news-card">
+                <img src="${art.image || 'https://picsum.photos/600/300'}" class="news-img">
+                <div class="news-info">
+                    <div style="font-size:10px; color:var(--primary); font-weight:800; margin-bottom:6px;">${art.source.name}</div>
+                    <a href="${art.url}" target="_blank" class="news-title">${art.title}</a>
+                    <span class="news-desc">${summary}</span>
+                    <div class="card-actions">
+                        <a href="${art.url}" target="_blank" class="read-more-btn">Read More</a>
+                        <button class="share-btn" onclick="shareNews('${art.title}', '${art.url}')">📤 Share</button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+        append ? feed.insertAdjacentHTML('beforeend', html) : feed.innerHTML = html;
+        if (!append && !isLocal) loadLocalArticles();
+    }
+
+    function handleFile(input) {
+        const reader = new FileReader();
+        reader.onload = (e) => state.uploadedImg = e.target.result;
+        if(input.files[0]) reader.readAsDataURL(input.files[0]);
+    }
+
+    function saveArticle() {
+        if (document.getElementById('adminPass').value !== "admin123") return alert("Wrong Key!");
+        const newArt = { 
+            title: document.getElementById('editTitle').value, 
+            description: document.getElementById('editDesc').value, 
+            image: state.uploadedImg, 
+            category: document.getElementById('editCat').value, 
+            publishedAt: new Date().toISOString(), 
+            source: { name: "RealPulse Editor" }, 
+            url: "#" 
+        };
+        let local = JSON.parse(localStorage.getItem('rp_news') || "[]");
+        if (state.editingIndex !== null) { local[state.editingIndex] = newArt; state.editingIndex = null; } 
+        else { local.unshift(newArt); }
+        localStorage.setItem('rp_news', JSON.stringify(local));
+        location.reload();
+    }
+
+    function loadManageList() {
+        const local = JSON.parse(localStorage.getItem('rp_news') || "[]");
+        document.getElementById('manage-list').innerHTML = local.map((art, index) => `
+            <div class="manage-item">
+                <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px;">${art.title}</div>
+                <div class="manage-btns">
+                    <button class="edit-mini" onclick="editLocal(${index})">Edit</button>
+                    <button class="del-mini" onclick="deleteLocal(${index})">Del</button>
+                </div>
+            </div>`).join('');
+    }
+
+    function deleteLocal(index) {
+        if(confirm("Delete this post?")) {
+            let local = JSON.parse(localStorage.getItem('rp_news') || "[]");
+            local.splice(index, 1);
+            localStorage.setItem('rp_news', JSON.stringify(local));
+            location.reload();
+        }
+    }
+
+    function editLocal(index) {
+        let local = JSON.parse(localStorage.getItem('rp_news') || "[]");
+        const art = local[index];
+        document.getElementById('editTitle').value = art.title;
+        document.getElementById('editDesc').value = art.description;
+        document.getElementById('editCat').value = art.category;
+        state.uploadedImg = art.image;
+        state.editingIndex = index;
+        document.getElementById('editor-mode-title').innerText = "Edit Post";
+        document.getElementById('publishBtn').innerText = "Update Article";
+    }
+
+    function loadLocalArticles() {
+        const local = JSON.parse(localStorage.getItem('rp_news') || "[]");
+        const filtered = local.filter(a => a.category === state.category || state.category === 'general');
+        if(filtered.length > 0) renderArticles(filtered, true, true);
+    }
+
+    async function shareNews(title, url) {
+        if (navigator.share) { try { await navigator.share({ title: 'RealPulse', text: title, url: url }); } catch (e) {} }
+        else { navigator.clipboard.writeText(url); alert("Link Copied!"); }
+    }
+
+    function toggleDarkMode() {
+        const isDark = document.body.getAttribute('data-theme') === 'dark';
+        document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+        localStorage.setItem('theme', isDark ? 'light' : 'dark');
+    }
+
+    function toggleLanguage() { 
+        state.lang = (state.lang === 'en' ? 'hi' : 'en'); 
+        document.getElementById('langBtn').innerText = (state.lang === 'en' ? 'हिंदी' : 'English');
+        fetchNews(); renderCategories();
+    }
+
+    function setCategory(id) { state.category = id; renderCategories(); fetchNews(); }
+    function openEditor() { document.getElementById('editor-modal').style.display = 'block'; loadManageList(); }
+    function closeEditor() { 
+        document.getElementById('editor-modal').style.display = 'none'; 
+        state.editingIndex = null;
+        document.getElementById('editor-mode-title').innerText = "Post News Article";
+    }
+    function installPWA() { alert("RealPulse: Use 'Add to Home Screen' in browser settings."); }
+
+    init();
+</script>
+</body>
+</html>
