@@ -24,7 +24,6 @@ background:var(--bg);
 color:var(--text);
 overflow-x:hidden;
 }
-
 header{
 position:fixed;
 top:0;
@@ -37,30 +36,23 @@ align-items:center;
 box-shadow:0 3px 15px rgba(0,0,0,.08);
 z-index:1000;
 }
-
 .logo{
 font-weight:900;
 font-size:22px;
 color:var(--primary);
 }
-
-button{
-cursor:pointer;
-}
-
 .lang-toggle button{
 margin-left:5px;
 padding:6px 12px;
 border:none;
 border-radius:20px;
 font-weight:600;
+cursor:pointer;
 }
-
 .lang-toggle .active{
 background:var(--primary);
 color:#fff;
 }
-
 .cat-bar{
 margin-top:70px;
 display:flex;
@@ -68,27 +60,24 @@ overflow-x:auto;
 padding:10px;
 gap:8px;
 }
-
 .cat-btn{
 padding:7px 15px;
 border:none;
 border-radius:20px;
 background:#ddd;
 font-weight:600;
+cursor:pointer;
 }
-
 .cat-btn.active{
 background:var(--primary);
 color:#fff;
 }
-
 #feed{
 max-width:650px;
 margin:auto;
 padding:15px;
 padding-bottom:90px;
 }
-
 .card{
 background:var(--card);
 border-radius:16px;
@@ -97,43 +86,35 @@ margin-bottom:20px;
 box-shadow:0 5px 20px rgba(0,0,0,.08);
 transition:.3s;
 }
-
 .card:hover{
 transform:translateY(-5px);
 box-shadow:0 10px 25px rgba(0,0,0,.12);
 }
-
 .card img{
 width:100%;
 height:220px;
 object-fit:cover;
 }
-
 .info{
 padding:15px;
 }
-
 .title{
 font-weight:700;
 font-size:18px;
 margin-bottom:8px;
 display:block;
-text-decoration:none;
 color:var(--text);
 }
-
 .desc{
 font-size:14px;
 margin-bottom:8px;
 color:#555;
 }
-
 .date{
 font-size:12px;
 color:#888;
 margin-bottom:10px;
 }
-
 .read-btn{
 display:inline-block;
 padding:8px 15px;
@@ -144,13 +125,11 @@ text-decoration:none;
 font-size:13px;
 font-weight:600;
 }
-
 .loader{
 text-align:center;
 padding:20px;
 font-weight:600;
 }
-
 footer{
 position:fixed;
 bottom:0;
@@ -162,7 +141,6 @@ padding:10px;
 border-top:1px solid #ddd;
 z-index:1000;
 }
-
 .modal{
 display:none;
 position:fixed;
@@ -172,7 +150,6 @@ align-items:center;
 justify-content:center;
 z-index:2000;
 }
-
 .modal-content{
 background:#fff;
 width:90%;
@@ -183,7 +160,6 @@ padding:20px;
 border-radius:15px;
 box-sizing:border-box;
 }
-
 .modal-content input,
 .modal-content textarea,
 .modal-content select{
@@ -194,7 +170,6 @@ border-radius:8px;
 border:1px solid #ccc;
 box-sizing:border-box;
 }
-
 .modal-content button{
 padding:10px;
 border:none;
@@ -202,6 +177,7 @@ border-radius:8px;
 background:var(--primary);
 color:#fff;
 font-weight:600;
+cursor:pointer;
 }
 </style>
 </head>
@@ -227,7 +203,7 @@ font-weight:600;
 <button onclick="toggleTheme()">🌓</button>
 </footer>
 
-<!-- Login Modal -->
+<!-- LOGIN MODAL -->
 <div class="modal" id="loginModal">
 <div class="modal-content">
 <h3>Editor Login</h3>
@@ -238,44 +214,74 @@ font-weight:600;
 </div>
 </div>
 
-<!-- Editor Modal -->
+<!-- EDITOR MODAL -->
 <div class="modal" id="editorModal">
 <div class="modal-content">
 <h3>Post Article</h3>
 <input id="titleInput" placeholder="Title">
 <textarea id="descInput" rows="4" placeholder="Content"></textarea>
-<input id="imageInput" placeholder="Image URL">
-<select id="catInput">
-<option>General</option>
-<option>Nation</option>
-<option>Business</option>
-<option>Technology</option>
-<option>Sports</option>
-<option>Miscellaneous</option>
-</select>
+
+<input type="file" id="imageFile" accept="image/*" onchange="handleImageUpload(event)">
+<img id="previewImg" style="width:100%;margin-bottom:10px;border-radius:10px;display:none;">
+
+<select id="catInput"></select>
+
 <button onclick="publishArticle()">Publish</button>
 <button onclick="closeEditor()">Close</button>
 </div>
 </div>
 
 <script>
-let state={page:1,category:"General",lang:"en",loading:false,finished:false};
-const categories=["General","Nation","Business","Technology","Sports","Miscellaneous"];
+let state={page:1,category:"general",lang:"en",loading:false,finished:false};
+let uploadedImage=null;
+
+const categories=[
+{id:"general",en:"General",hi:"सामान्य"},
+{id:"nation",en:"Nation",hi:"राष्ट्रीय"},
+{id:"business",en:"Business",hi:"व्यापार"},
+{id:"technology",en:"Technology",hi:"तकनीक"},
+{id:"sports",en:"Sports",hi:"खेल"},
+{id:"miscellaneous",en:"Miscellaneous",hi:"विविध"}
+];
 
 function renderCategories(){
 document.getElementById("catBar").innerHTML=
-categories.map(c=>`<button class="cat-btn ${state.category===c?"active":""}"
-onclick="setCategory('${c}')">${c}</button>`).join("");
+categories.map(c=>`
+<button class="cat-btn ${state.category===c.id?"active":""}"
+onclick="setCategory('${c.id}')">
+${state.lang==="en"?c.en:c.hi}
+</button>`).join("");
+
+document.getElementById("catInput").innerHTML=
+categories.map(c=>`
+<option value="${c.id}">
+${state.lang==="en"?c.en:c.hi}
+</option>`).join("");
 }
 
-function setCategory(cat){state.category=cat;reset();fetchNews();}
+function setCategory(cat){
+state.category=cat;
+reset();
+renderCategories();
+fetchNews();
+}
+
 function setLang(l){
 state.lang=l;
 document.getElementById("enBtn").classList.toggle("active",l==="en");
 document.getElementById("hiBtn").classList.toggle("active",l==="hi");
-reset();fetchNews();
+reset();
+renderCategories();
+fetchNews();
 }
-function reset(){state.page=1;state.finished=false;document.getElementById("feed").innerHTML="";}
+
+function reset(){
+state.page=1;
+state.finished=false;
+document.getElementById("feed").innerHTML="";
+document.getElementById("loader").innerText="Loading...";
+}
+
 function toggleTheme(){
 document.body.setAttribute("data-theme",
 document.body.getAttribute("data-theme")==="dark"?"light":"dark");
@@ -285,7 +291,7 @@ async function fetchNews(){
 if(state.loading||state.finished)return;
 state.loading=true;
 
-const res=await fetch(`/api/news?page=${state.page}&category=${state.category.toLowerCase()}&lang=${state.lang}`);
+const res=await fetch(`/api/news?page=${state.page}&category=${state.category}&lang=${state.lang}`);
 const data=await res.json();
 
 if(data.articles?.length){
@@ -293,7 +299,8 @@ render(data.articles);
 state.page++;
 }else{
 state.finished=true;
-document.getElementById("loader").innerText="No more news";
+document.getElementById("loader").innerText=
+state.lang==="en"?"No more news":"और समाचार उपलब्ध नहीं";
 }
 state.loading=false;
 }
@@ -308,7 +315,9 @@ feed.innerHTML+=`
 <div class="title">${a.title}</div>
 <div class="desc">${(a.description||"").substring(0,150)}...</div>
 <div class="date">${new Date(a.publishedAt||a.createdAt).toLocaleDateString()}</div>
-<a href="${a.url||'#'}" target="_blank" class="read-btn">Read More</a>
+<a href="${a.url||'#'}" target="_blank" class="read-btn">
+${state.lang==="en"?"Read More":"पूरा पढ़ें"}
+</a>
 </div>
 </div>`;
 });
@@ -320,7 +329,19 @@ fetchNews();
 }
 });
 
-/* Editor */
+function handleImageUpload(event){
+const file=event.target.files[0];
+if(!file)return;
+const reader=new FileReader();
+reader.onload=function(e){
+uploadedImage=e.target.result;
+const preview=document.getElementById("previewImg");
+preview.src=uploadedImage;
+preview.style.display="block";
+};
+reader.readAsDataURL(file);
+}
+
 function openLogin(){document.getElementById("loginModal").style.display="flex";}
 function closeLogin(){document.getElementById("loginModal").style.display="none";}
 function openEditor(){document.getElementById("editorModal").style.display="flex";}
@@ -346,11 +367,15 @@ alert("Invalid credentials");
 }
 
 async function publishArticle(){
+if(!uploadedImage){
+alert("Please upload image");
+return;
+}
 const article={
 title:document.getElementById("titleInput").value,
 description:document.getElementById("descInput").value,
-image:document.getElementById("imageInput").value,
-category:document.getElementById("catInput").value.toLowerCase(),
+image:uploadedImage,
+category:document.getElementById("catInput").value,
 lang:state.lang
 };
 
