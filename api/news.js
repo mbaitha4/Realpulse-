@@ -2,54 +2,29 @@ const connectToDatabase = require("../lib/mongodb");
 
 module.exports = async function handler(req, res) {
   try {
-    const { category = "general", lang = "en" } = req.query;
     const { db } = await connectToDatabase();
 
-    let gnewsData = null;
+    const response = await fetch(
+      `https://gnews.io/api/v4/top-headlines?category=general&lang=en&country=in&max=10&apikey=${process.env.GNEWS_API_KEY}`
+    );
 
-    try {
-      const response = await fetch(
-        `https://gnews.io/api/v4/top-headlines?category=${category}&lang=${lang}&country=in&max=10&apikey=${process.env.GNEWS_API_KEY}`
+    const data = await response.json();
+
+    if (data.articles && data.articles.length > 0) {
+      await db.collection("news").deleteMany({});
+      await db.collection("news").insertMany(
+        data.articles.map(a => ({
+          ...a,
+          createdAt: new Date()
+        }))
       );
 
-      gnewsData = await response.json();
-
-      if (gnewsData.articles && gnewsData.articles.length > 0) {
-        // Save fresh news in Mongo
-        await db.collection("news").insertMany(
-          gnewsData.articles.map(a => ({
-            ...a,
-            category,
-            lang,
-            createdAt: new Date()
-          }))
-        );
-
-        return res.status(200).json({
-          articles: gnewsData.articles,
-          source: "live"
-        });
-      }
-
-    } catch (err) {
-      console.log("GNews failed, using cache");
+      return res.status(200).json({ message: "Seeded successfully" });
     }
 
-    // 🔥 Fallback to cached news
-    const cachedNews = await db.collection("news")
-      .find({ category, lang })
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .toArray();
-
-    return res.status(200).json({
-      articles: cachedNews,
-      source: "cache"
-    });
+    return res.status(200).json({ message: "No live news" });
 
   } catch (error) {
-    return res.status(500).json({
-      error: error.message
-    });
+    return res.status(500).json({ error: error.message });
   }
 };
