@@ -1,20 +1,22 @@
-export default async function handler(req,res){
+import clientPromise from "../lib/mongodb";
 
-const {page=1,category="general"}=req.query;
-const API_KEY=process.env.GNEWS_API_KEY;
+export default async function handler(req, res) {
 
-try{
+res.setHeader("Cache-Control","s-maxage=300, stale-while-revalidate=600");
 
-const response=await fetch(
-`https://gnews.io/api/v4/top-headlines?category=${category}&country=in&max=10&page=${page}&apikey=${API_KEY}`
-);
+const { page=1, category="general", lang="en" } = req.query;
+const limit = 10;
 
-const data=await response.json();
+const client = await clientPromise;
+const db = client.db("realpulse");
 
-res.status(200).json(data);
+const articles = await db.collection("articles")
+.find({ category, lang })
+.sort({ publishedAt: -1 })
+.skip((page-1)*limit)
+.limit(limit)
+.toArray();
 
-}catch(err){
-res.status(500).json({error:"Failed"});
-}
+res.status(200).json({ articles });
 
 }
