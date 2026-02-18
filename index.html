@@ -1,41 +1,94 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RealPulse | Authentic News</title>
+<title>RealPulse</title>
 
 <style>
 :root{
 --primary:#E4405F;
---bg:#f0f2f5;
+--bg:#f4f6f9;
 --card:#ffffff;
---text:#1a1a1a;
+--text:#222;
 }
 [data-theme="dark"]{
 --bg:#121212;
 --card:#1e1e1e;
 --text:#e0e0e0;
 }
-body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text)}
-header{position:fixed;top:0;width:100%;background:var(--card);padding:15px;
+body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text);}
+header{
+position:fixed;top:0;width:100%;
+background:var(--card);
+padding:15px;
 display:flex;justify-content:space-between;align-items:center;
-box-shadow:0 2px 10px rgba(0,0,0,.1);z-index:10}
-.logo{font-weight:900;font-size:22px;color:var(--primary)}
-.cat-bar{margin-top:65px;display:flex;overflow-x:auto;padding:10px;gap:8px}
-.cat-btn{padding:6px 15px;border-radius:20px;border:none;background:#ddd;font-size:12px;cursor:pointer}
-.cat-btn.active{background:var(--primary);color:#fff}
-#feed{max-width:650px;margin:auto;padding:15px}
-.card{background:var(--card);margin-bottom:20px;border-radius:12px;
-overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,.1)}
-.card img{width:100%;height:250px;object-fit:cover}
-.info{padding:15px}
-.title{font-weight:700;font-size:18px;margin-bottom:8px;display:block;color:var(--text);text-decoration:none}
-.desc{font-size:14px;color:#666;margin-bottom:10px}
-.loader{text-align:center;padding:20px;font-weight:600}
-footer{position:fixed;bottom:0;width:100%;background:var(--card);
-display:flex;justify-content:space-around;padding:10px;border-top:1px solid #ccc}
-button{cursor:pointer}
+box-shadow:0 3px 15px rgba(0,0,0,.08);
+z-index:10;
+}
+.logo{font-weight:900;font-size:22px;color:var(--primary);}
+.lang-toggle button{
+margin-left:5px;padding:6px 12px;
+border:none;border-radius:20px;
+cursor:pointer;font-weight:600;
+}
+.lang-toggle .active{
+background:var(--primary);color:#fff;
+}
+.ticker{
+margin-top:60px;
+background:#000;
+color:#fff;
+padding:8px;
+white-space:nowrap;
+overflow:hidden;
+}
+.ticker span{
+display:inline-block;
+padding-left:100%;
+animation:scroll 25s linear infinite;
+}
+@keyframes scroll{
+0%{transform:translateX(0)}
+100%{transform:translateX(-100%)}
+}
+.cat-bar{
+display:flex;overflow-x:auto;padding:10px;gap:8px;
+}
+.cat-btn{
+padding:7px 15px;border:none;border-radius:20px;
+background:#ddd;cursor:pointer;font-weight:600;
+}
+.cat-btn.active{background:var(--primary);color:#fff;}
+#feed{max-width:650px;margin:auto;padding:15px;padding-bottom:90px;}
+.card{
+background:var(--card);
+border-radius:16px;
+overflow:hidden;
+margin-bottom:20px;
+box-shadow:0 5px 20px rgba(0,0,0,.08);
+transition:.3s;
+}
+.card:hover{
+transform:translateY(-5px);
+box-shadow:0 10px 25px rgba(0,0,0,.12);
+}
+.card img{
+width:100%;height:220px;object-fit:cover;
+}
+.info{padding:15px;}
+.title{
+font-weight:700;font-size:18px;margin-bottom:8px;
+display:block;text-decoration:none;color:var(--text);
+}
+.desc{font-size:14px;margin-bottom:8px;color:#555;}
+.date{font-size:12px;color:#888;margin-bottom:10px;}
+.read-btn{
+display:inline-block;padding:8px 15px;
+background:var(--primary);color:#fff;
+border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;
+}
+.loader{text-align:center;padding:20px;font-weight:600;}
 </style>
 </head>
 
@@ -43,97 +96,53 @@ button{cursor:pointer}
 
 <header>
 <div class="logo">RealPulse</div>
-<div>
+<div class="lang-toggle">
+<button id="enBtn" class="active" onclick="setLang('en')">English</button>
+<button id="hiBtn" onclick="setLang('hi')">Hindi</button>
 <button onclick="toggleTheme()">🌙</button>
-<button onclick="openEditor()">👤</button>
 </div>
 </header>
 
+<div class="ticker"><span id="breakingNews">Loading breaking news...</span></div>
 <div class="cat-bar" id="catBar"></div>
-
 <div id="feed"></div>
 <div id="loader" class="loader">Loading...</div>
 
-<!-- Editor -->
-<div id="editor" style="display:none;position:fixed;inset:0;background:#000c;padding:20px;overflow:auto">
-<div style="background:#fff;padding:20px;border-radius:12px;max-width:500px;margin:auto">
-<h3>Post News</h3>
-<input id="adminPass" type="password" placeholder="Admin Key (admin123)" style="width:100%;margin-bottom:10px">
-<input id="titleInput" placeholder="Title" style="width:100%;margin-bottom:10px">
-<textarea id="descInput" placeholder="Content" style="width:100%;margin-bottom:10px"></textarea>
-<button onclick="publish()">Publish</button>
-<button onclick="closeEditor()">Close</button>
-</div>
-</div>
-
-<footer>
-<button onclick="location.reload()">🏠</button>
-<button onclick="toggleTheme()">🌓</button>
-</footer>
-
 <script>
-let state={
-page:1,
-loading:false,
-finished:false,
-category:"general"
-};
-
-const categories=["general","nation","business","technology","sports"];
+let state={page:1,category:"General",lang:"en",loading:false,finished:false};
+const categories=["General","Nation","Business","Technology","Sports","Miscellaneous"];
 
 function renderCategories(){
 document.getElementById("catBar").innerHTML=
-categories.map(c=>
-`<button class="cat-btn ${state.category===c?"active":""}" 
+categories.map(c=>`<button class="cat-btn ${state.category===c?"active":""}"
 onclick="setCategory('${c}')">${c}</button>`).join("");
 }
 
-function setCategory(cat){
-state.category=cat;
-state.page=1;
-state.finished=false;
-document.getElementById("feed").innerHTML="";
-renderCategories();
-fetchNews();
+function setCategory(cat){state.category=cat;reset();fetchNews();}
+function setLang(l){
+state.lang=l;
+document.getElementById("enBtn").classList.toggle("active",l==="en");
+document.getElementById("hiBtn").classList.toggle("active",l==="hi");
+reset();fetchNews();fetchBreaking();
 }
-
-function toggleTheme(){
-let dark=document.body.getAttribute("data-theme")==="dark";
-document.body.setAttribute("data-theme",dark?"light":"dark");
-}
-
-function getSummary(t){
-if(!t)return"";
-let last=Math.max(t.lastIndexOf("."),t.lastIndexOf("?"),t.lastIndexOf("!"));
-return last>50?t.substring(0,last+1):t;
-}
+function reset(){state.page=1;state.finished=false;document.getElementById("feed").innerHTML="";}
+function toggleTheme(){document.body.setAttribute("data-theme",
+document.body.getAttribute("data-theme")==="dark"?"light":"dark");}
 
 async function fetchNews(){
 if(state.loading||state.finished)return;
 state.loading=true;
-document.getElementById("loader").style.display="block";
 
-try{
-const res=await fetch(`/api/news?page=${state.page}&category=${state.category}`);
+const res=await fetch(`/api/news?page=${state.page}&category=${state.category.toLowerCase()}&lang=${state.lang}`);
 const data=await res.json();
 
-if(data.articles&&data.articles.length){
+if(data.articles?.length){
 render(data.articles);
-localStorage.setItem("cache_"+state.category,JSON.stringify(data.articles));
 state.page++;
 }else{
 state.finished=true;
 document.getElementById("loader").innerText="No more news";
 }
-}catch(e){
-const cached=JSON.parse(localStorage.getItem("cache_"+state.category)||"[]");
-if(cached.length){
-render(cached);
-state.finished=true;
-document.getElementById("loader").innerText="Showing saved news";
-}
-}
-
 state.loading=false;
 }
 
@@ -145,36 +154,33 @@ feed.innerHTML+=`
 <img src="${a.image||'https://picsum.photos/600/300'}">
 <div class="info">
 <a href="${a.url}" target="_blank" class="title">${a.title}</a>
-<div class="desc">${getSummary(a.description||a.content)}</div>
+<div class="desc">${(a.description||"").substring(0,150)}...</div>
+<div class="date">${new Date(a.publishedAt).toLocaleDateString()}</div>
+<a href="${a.url}" target="_blank" class="read-btn">Read More</a>
 </div>
 </div>`;
 });
 }
 
-// infinite scroll
 window.addEventListener("scroll",()=>{
 if(window.innerHeight+window.scrollY>=document.body.offsetHeight-200){
 fetchNews();
 }
 });
 
-// editor
-function openEditor(){document.getElementById("editor").style.display="block"}
-function closeEditor(){document.getElementById("editor").style.display="none"}
-
-function publish(){
-if(document.getElementById("adminPass").value!=="admin123")return alert("Wrong Key");
-let t=document.getElementById("titleInput").value;
-let d=document.getElementById("descInput").value;
-let local=JSON.parse(localStorage.getItem("local_posts")||"[]");
-local.unshift({title:t,description:d,image:"https://picsum.photos/600/300",url:"#"});
-localStorage.setItem("local_posts",JSON.stringify(local));
-alert("Posted");
-closeEditor();
+async function fetchBreaking(){
+const res=await fetch(`/api/news?page=1&category=general&lang=${state.lang}`);
+const data=await res.json();
+if(data.articles?.length){
+document.getElementById("breakingNews").innerText=
+data.articles.slice(0,5).map(a=>a.title).join(" • ");
 }
+}
+setInterval(fetchBreaking,300000);
 
 renderCategories();
 fetchNews();
+fetchBreaking();
 </script>
 
 </body>
