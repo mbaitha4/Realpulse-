@@ -22,7 +22,6 @@ margin:0;
 font-family:system-ui;
 background:var(--bg);
 color:var(--text);
-overflow-x:hidden;
 }
 
 header{
@@ -52,37 +51,16 @@ font-weight:600;
 cursor:pointer;
 background:var(--primary);
 color:#fff;
-margin-right:10px; /* slightly left from extreme right */
-}
-
-.cat-bar{
-margin-top:70px;
-display:flex;
-overflow-x:auto;
-padding:10px;
-gap:8px;
-}
-
-.cat-btn{
-padding:7px 15px;
-border:none;
-border-radius:20px;
-background:#ddd;
-font-weight:600;
-cursor:pointer;
-}
-
-.cat-btn.active{
-background:var(--primary);
-color:#fff;
+margin-right:15px;
 }
 
 .ticker{
+margin-top:65px;
 background:#000;
 color:#fff;
 padding:8px;
-white-space:nowrap;
 overflow:hidden;
+white-space:nowrap;
 }
 
 .ticker span{
@@ -149,6 +127,12 @@ font-size:13px;
 font-weight:600;
 }
 
+.loader{
+text-align:center;
+padding:20px;
+font-weight:600;
+}
+
 footer{
 position:fixed;
 bottom:0;
@@ -159,189 +143,93 @@ justify-content:space-around;
 padding:10px;
 border-top:1px solid #ddd;
 }
-
-.modal{
-display:none;
-position:fixed;
-inset:0;
-background:rgba(0,0,0,.6);
-align-items:center;
-justify-content:center;
-z-index:2000;
-}
-
-.modal-content{
-background:#fff;
-width:90%;
-max-width:500px;
-max-height:90vh;
-overflow-y:auto;
-padding:20px;
-border-radius:15px;
-}
-
-.modal-content input,
-.modal-content textarea,
-.modal-content select{
-width:100%;
-margin-bottom:10px;
-padding:10px;
-border-radius:8px;
-border:1px solid #ccc;
-}
-
-.modal-content button{
-padding:10px;
+footer button{
 border:none;
-border-radius:8px;
-background:var(--primary);
-color:#fff;
-font-weight:600;
+background:none;
+font-size:16px;
 cursor:pointer;
-margin-bottom:6px;
-}
-
-.manage-item{
-display:flex;
-justify-content:space-between;
-align-items:center;
-background:#eee;
-padding:8px;
-margin-bottom:6px;
-border-radius:8px;
 }
 </style>
 </head>
 
-<body>
+<body data-theme="light">
 
 <header>
 <div class="logo">RealPulse</div>
-<button class="lang-btn" onclick="toggleLang()">
-English / हिंदी
-</button>
+<button class="lang-btn" onclick="toggleLang()">English / हिंदी</button>
 </header>
 
 <div class="ticker">
 <span id="breakingNews">Loading breaking news...</span>
 </div>
 
-<div class="cat-bar" id="catBar"></div>
 <div id="feed"></div>
+<div id="loader" class="loader">Loading...</div>
 
 <footer>
 <button onclick="location.reload()">🏠</button>
-<button onclick="openLogin()">✍️</button>
+<button onclick="toggleTheme()">🌙</button>
 </footer>
 
-<!-- LOGIN -->
-<div class="modal" id="loginModal">
-<div class="modal-content">
-<h3>Editor Login</h3>
-<input id="editorUser" placeholder="Username">
-<input id="editorPass" type="password" placeholder="Password">
-<button onclick="editorLogin()">Login</button>
-<button onclick="closeLogin()">Close</button>
-</div>
-</div>
-
-<!-- EDITOR DASHBOARD -->
-<div class="modal" id="editorModal">
-<div class="modal-content">
-<h3>Editor Dashboard</h3>
-
-<input id="titleInput" placeholder="Title">
-<textarea id="descInput" rows="4" placeholder="Content"></textarea>
-
-<input type="file" id="imageFile" accept="image/*" onchange="handleImageUpload(event)">
-<img id="previewImg" style="width:100%;display:none;border-radius:10px;margin-bottom:10px;">
-
-<select id="catInput"></select>
-
-<button onclick="publishArticle()">Publish</button>
-
-<hr>
-
-<h4>Manage Articles</h4>
-<div id="manageList"></div>
-
-<button onclick="closeEditor()">Close</button>
-</div>
-</div>
-
 <script>
-let state={page:1,category:"general",lang:"en",loading:false,finished:false};
-let uploadedImage=null;
+let state={page:1,lang:"en",loading:false,finished:false};
 
-const EDITOR_USERNAME="editor";
-const EDITOR_PASSWORD="Realpulse123";
-
-const categories=[
-{id:"general",en:"General",hi:"सामान्य"},
-{id:"nation",en:"Nation",hi:"राष्ट्रीय"},
-{id:"business",en:"Business",hi:"व्यापार"},
-{id:"technology",en:"Technology",hi:"तकनीक"},
-{id:"sports",en:"Sports",hi:"खेल"},
-{id:"miscellaneous",en:"Miscellaneous",hi:"विविध"}
-];
-
-function renderCategories(){
-document.getElementById("catBar").innerHTML=
-categories.map(c=>`
-<button class="cat-btn ${state.category===c.id?"active":""}"
-onclick="setCategory('${c.id}')">
-${state.lang==="en"?c.en:c.hi}
-</button>`).join("");
-
-document.getElementById("catInput").innerHTML=
-categories.map(c=>`
-<option value="${c.id}">
-${state.lang==="en"?c.en:c.hi}
-</option>`).join("");
-}
-
+/* Toggle Language */
 function toggleLang(){
-state.lang=state.lang==="en"?"hi":"en";
+state.lang = state.lang==="en"?"hi":"en";
 reset();
-renderCategories();
 fetchNews();
+loadBreaking();
 }
 
-function setCategory(cat){
-state.category=cat;
-reset();
-renderCategories();
-fetchNews();
+/* Dark Mode */
+function toggleTheme(){
+document.body.setAttribute("data-theme",
+document.body.getAttribute("data-theme")==="dark"?"light":"dark");
 }
 
+/* Reset Feed */
 function reset(){
 state.page=1;
 state.finished=false;
 document.getElementById("feed").innerHTML="";
+document.getElementById("loader").innerText="Loading...";
 }
 
+/* Fetch News */
 async function fetchNews(){
-if(state.loading||state.finished)return;
+if(state.loading||state.finished) return;
 state.loading=true;
 
-const res=await fetch(`/api/news?page=${state.page}&category=${state.category}&lang=${state.lang}`);
+try{
+const res=await fetch(`/api/news?page=${state.page}&lang=${state.lang}`);
 const data=await res.json();
 
-if(data.articles?.length){
+console.log("API Response:",data);
+
+if(data.articles && data.articles.length>0){
 render(data.articles);
 state.page++;
 }else{
 state.finished=true;
+document.getElementById("loader").innerText=
+state.lang==="en"?"No more news":"और समाचार उपलब्ध नहीं";
 }
+}catch(err){
+console.error("Fetch Error:",err);
+document.getElementById("loader").innerText="Error loading news";
+}
+
 state.loading=false;
 }
 
+/* Render News */
 function render(articles){
 const feed=document.getElementById("feed");
 articles.forEach(a=>{
 feed.innerHTML+=`
 <div class="card">
-<img src="${a.image||'https://picsum.photos/600/300'}">
+<img src="${a.image || 'https://picsum.photos/600/300'}">
 <div class="info">
 <div class="title">${a.title}</div>
 <div class="desc">${(a.description||"").substring(0,150)}...</div>
@@ -354,103 +242,35 @@ ${state.lang==="en"?"Read More":"पूरा पढ़ें"}
 });
 }
 
-/* Breaking ticker auto refresh */
+/* Breaking News */
 async function loadBreaking(){
-const res=await fetch(`/api/news?page=1&category=general&lang=${state.lang}`);
+try{
+const res=await fetch(`/api/news?page=1&lang=${state.lang}`);
 const data=await res.json();
-if(data.articles?.length){
+
+if(data.articles && data.articles.length>0){
 document.getElementById("breakingNews").innerText=
 data.articles.slice(0,5).map(a=>a.title).join(" • ");
-}
-}
-setInterval(loadBreaking,120000); // 2 min
-loadBreaking();
-
-/* Editor */
-function openLogin(){document.getElementById("loginModal").style.display="flex";}
-function closeLogin(){document.getElementById("loginModal").style.display="none";}
-function openEditor(){
-document.getElementById("editorModal").style.display="flex";
-loadManageList();
-}
-function closeEditor(){document.getElementById("editorModal").style.display="none";}
-
-function editorLogin(){
-const u=document.getElementById("editorUser").value;
-const p=document.getElementById("editorPass").value;
-
-if(u===EDITOR_USERNAME && p===EDITOR_PASSWORD){
-closeLogin();
-openEditor();
 }else{
-alert("Invalid credentials");
+document.getElementById("breakingNews").innerText="No breaking news available";
+}
+}catch(err){
+document.getElementById("breakingNews").innerText="Error loading breaking news";
 }
 }
 
-function handleImageUpload(event){
-const file=event.target.files[0];
-if(!file)return;
-const reader=new FileReader();
-reader.onload=e=>{
-uploadedImage=e.target.result;
-document.getElementById("previewImg").src=uploadedImage;
-document.getElementById("previewImg").style.display="block";
-};
-reader.readAsDataURL(file);
+setInterval(loadBreaking,120000);
+
+/* Infinite Scroll */
+window.addEventListener("scroll",()=>{
+if(window.innerHeight+window.scrollY>=document.body.offsetHeight-200){
+fetchNews();
 }
-
-async function publishArticle(){
-if(!uploadedImage){alert("Upload image");return;}
-
-await fetch("/api/editor-post",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-title:titleInput.value,
-description:descInput.value,
-image:uploadedImage,
-category:catInput.value,
-lang:state.lang
-})
 });
-alert("Published");
-uploadedImage=null;
-previewImg.style.display="none";
-loadManageList();
-reset();
+
+/* Initial Load */
 fetchNews();
-}
-
-async function loadManageList(){
-const res=await fetch("/api/news?page=1&category="+state.category+"&lang="+state.lang);
-const data=await res.json();
-const list=document.getElementById("manageList");
-list.innerHTML="";
-(data.articles||[]).forEach(a=>{
-list.innerHTML+=`
-<div class="manage-item">
-<span>${a.title.substring(0,20)}</span>
-<div>
-<button onclick="editArticle('${a._id}')">Edit</button>
-<button onclick="deleteArticle('${a._id}')">Del</button>
-</div>
-</div>`;
-});
-}
-
-async function deleteArticle(id){
-await fetch("/api/editor-delete?id="+id,{method:"DELETE"});
-loadManageList();
-reset();
-fetchNews();
-}
-
-function editArticle(id){
-alert("Editing feature backend integration required");
-}
-
-renderCategories();
-fetchNews();
+loadBreaking();
 </script>
 
 </body>
