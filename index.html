@@ -195,9 +195,12 @@ cursor:pointer;
 <button onclick="location.reload()">🏠</button>
 <button onclick="toggleTheme()">🌙</button>
 </footer>
-
 <script>
 let state={page:1,category:"general",lang:"en",loading:false,finished:false};
+let uploadedImage=null;
+
+const EDITOR_USERNAME="editor";
+const EDITOR_PASSWORD="Realpulse123";
 
 const categories=[
 {id:"general",en:"General",hi:"सामान्य"},
@@ -240,16 +243,26 @@ state.finished=false;
 document.getElementById("feed").innerHTML="";
 }
 
+/* 60 WORD SUMMARY */
 function summarizeText(text){
-if(!text) return "";
-let words=text.split(" ");
-if(words.length<=60) return text;
+let words=(text||"").split(" ");
 return words.slice(0,60).join(" ")+"...";
+}
+
+/* TIME AGO FORMAT */
+function timeAgo(date){
+const seconds=Math.floor((new Date()-new Date(date))/1000);
+let interval=Math.floor(seconds/3600);
+if(interval>=1) return interval+" hr"+(interval>1?"s":"")+" ago";
+interval=Math.floor(seconds/60);
+if(interval>=1) return interval+" min"+(interval>1?"s":"")+" ago";
+return "Just now";
 }
 
 async function fetchNews(){
 if(state.loading||state.finished)return;
 state.loading=true;
+document.getElementById("spinner").style.display="block";
 
 try{
 const res=await fetch(`/api/news?page=${state.page}&category=${state.category}&lang=${state.lang}`);
@@ -260,12 +273,10 @@ render(data.articles);
 state.page++;
 }else{
 state.finished=true;
-document.getElementById("loader").innerText=
-state.lang==="en"?"No more news":"और समाचार उपलब्ध नहीं";
 }
-}catch(e){
-document.getElementById("loader").innerText="Error loading news";
-}
+}catch(e){}
+
+document.getElementById("spinner").style.display="none";
 state.loading=false;
 }
 
@@ -281,12 +292,13 @@ feed.innerHTML+=`
 ${a.title}
 </a>
 </div>
-<div class="desc">${summarizeText(a.description||"")}</div>
-<div class="date">${new Date(a.createdAt||a.publishedAt).toLocaleDateString()}</div>
+<div class="desc">${summarizeText(a.description)}</div>
+<div class="date">${timeAgo(a.createdAt||a.publishedAt)}</div>
 <a href="${a.url||'#'}" target="_blank" class="read-btn">
 ${state.lang==="en"?"Read More":"पूरा पढ़ें"}
 </a>
-<button class="share-btn" onclick="shareNews('${a.title}','${a.url||location.href}')">
+<button class="share-btn"
+onclick="shareNews('${a.title}','${a.url||location.href}')">
 Share
 </button>
 </div>
@@ -294,23 +306,23 @@ Share
 });
 }
 
-/* Infinite Scroll */
+/* FIXED INFINITE SCROLL */
 window.addEventListener("scroll",()=>{
-if((window.innerHeight+window.scrollY)>=document.body.offsetHeight-200){
+if(window.innerHeight + window.scrollY >= document.body.offsetHeight - 200){
 fetchNews();
 }
 });
 
-/* Share */
+/* SHARE */
 function shareNews(title,url){
 if(navigator.share){
-navigator.share({title:title,url:url});
+navigator.share({title,url});
 }else{
 window.open(`https://wa.me/?text=${encodeURIComponent(title+" "+url)}`,'_blank');
 }
 }
 
-/* Breaking */
+/* BREAKING */
 async function loadBreaking(){
 try{
 const res=await fetch(`/api/news?page=1&category=general&lang=${state.lang}`);
@@ -328,7 +340,69 @@ document.body.setAttribute("data-theme",
 document.body.getAttribute("data-theme")==="dark"?"light":"dark");
 }
 
-/* PWA Install */
+/* EDITOR */
+function openLogin(){loginModal.style.display="flex";}
+function closeLogin(){loginModal.style.display="none";}
+function openEditor(){editorModal.style.display="flex";loadManageList();}
+function closeEditor(){editorModal.style.display="none";}
+
+function editorLogin(){
+if(editorUser.value===EDITOR_USERNAME && editorPass.value===EDITOR_PASSWORD){
+closeLogin();openEditor();
+}else alert("Invalid credentials");
+}
+
+function handleImageUpload(event){
+const file=event.target.files[0];
+const reader=new FileReader();
+reader.onload=e=>{
+uploadedImage=e.target.result;
+previewImg.src=uploadedImage;
+previewImg.style.display="block";
+};
+reader.readAsDataURL(file);
+}
+
+async function publishArticle(){
+if(!uploadedImage){alert("Upload image");return;}
+await fetch("/api/editor-post",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+title:titleInput.value,
+description:descInput.value,
+image:uploadedImage,
+category:catInput.value,
+lang:state.lang
+})
+});
+alert("Published");
+loadManageList();
+reset();
+fetchNews();
+}
+
+async function loadManageList(){
+const res=await fetch(`/api/news?page=1`);
+const data=await res.json();
+manageList.innerHTML="";
+(data.articles||[]).forEach(a=>{
+manageList.innerHTML+=`
+<div class="manage-item">
+<span>${a.title.substring(0,20)}</span>
+<button onclick="deleteArticle('${a._id}')">Del</button>
+</div>`;
+});
+}
+
+async function deleteArticle(id){
+await fetch("/api/editor-delete?id="+id,{method:"DELETE"});
+loadManageList();
+reset();
+fetchNews();
+}
+
+/* INSTALL BUTTON FIX */
 let deferredPrompt;
 const installBtn=document.createElement("button");
 installBtn.innerText="📲 Install App";
@@ -337,7 +411,7 @@ installBtn.style.bottom="80px";
 installBtn.style.right="20px";
 installBtn.style.padding="10px 15px";
 installBtn.style.borderRadius="30px";
-installBtn.style.background="var(--primary)";
+installBtn.style.background="#E4405F";
 installBtn.style.color="#fff";
 installBtn.style.border="none";
 installBtn.style.display="none";
@@ -348,8 +422,7 @@ e.preventDefault();
 deferredPrompt=e;
 installBtn.style.display="block";
 });
-installBtn.addEventListener("click",async()=>{
-installBtn.style.display="none";
+installBtn.addEventListener("click",()=>{
 deferredPrompt.prompt();
 });
 
@@ -357,6 +430,5 @@ renderCategories();
 fetchNews();
 loadBreaking();
 </script>
-
 </body>
 </html>
