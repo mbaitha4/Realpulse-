@@ -6,7 +6,7 @@
 
 <title>Shabadam News - UP & Bihar News</title>
 
-<!-- SEO (UNCHANGED) -->
+<!-- ====== FULL SEO (UNCHANGED + DISCOVER BOOST) ====== -->
 <meta name="description" content="Shabadam News - Latest Breaking News from Uttar Pradesh & Bihar. Hindi & English News, Politics, Technology, Sports, Business & AI Updates.">
 <meta name="keywords" content="UP News, Bihar News, Hindi News, English News, Shabadam News, Uttar Pradesh News, Bihar Samachar, Breaking News India">
 <meta name="author" content="Shabadam News">
@@ -16,6 +16,7 @@
 <meta property="og:url" content="https://shabadam.com/">
 <meta property="og:image" content="https://shabadam.com/logo.png">
 <meta name="robots" content="index, follow">
+<meta name="googlebot" content="max-image-preview:large">
 <link rel="canonical" href="https://shabadam.com/">
 
 <link rel="manifest" href="manifest.json">
@@ -212,7 +213,7 @@ margin-bottom:6px;
 <button onclick="toggleTheme()">🌙</button>
 </footer>
 
-<!-- LOGIN -->
+<!-- EDITOR LOGIN -->
 <div class="modal" id="loginModal">
 <div class="modal-content">
 <h3>Editor Login</h3>
@@ -223,7 +224,7 @@ margin-bottom:6px;
 </div>
 </div>
 
-<!-- EDITOR -->
+<!-- EDITOR DASHBOARD -->
 <div class="modal" id="editorModal">
 <div class="modal-content">
 <h3>Post Article</h3>
@@ -238,6 +239,7 @@ margin-bottom:6px;
 </div>
 
 <script>
+
 let state={page:1,category:"general",lang:"en",loading:false,finished:false};
 let uploadedImage=null;
 
@@ -253,25 +255,46 @@ const categories=[
 {id:"miscellaneous",en:"Miscellaneous",hi:"विविध"}
 ];
 
+/* Discover Structured Data */
+function addStructuredData(article){
+const script=document.createElement("script");
+script.type="application/ld+json";
+script.innerHTML=JSON.stringify({
+"@context":"https://schema.org",
+"@type":"NewsArticle",
+"headline":article.title,
+"image":[article.image||"https://shabadam.com/logo.png"],
+"datePublished":article.createdAt||article.publishedAt,
+"dateModified":article.createdAt||article.publishedAt,
+"author":{"@type":"Organization","name":"Shabadam News"},
+"publisher":{
+"@type":"Organization",
+"name":"Shabadam News",
+"logo":{"@type":"ImageObject","url":"https://shabadam.com/logo.png"}
+}
+});
+document.head.appendChild(script);
+}
+
 function renderCategories(){
-document.getElementById("catBar").innerHTML=
+catBar.innerHTML=
 categories.map(c=>`
 <button class="cat-btn ${state.category===c.id?"active":""}"
 onclick="setCategory('${c.id}')">
 ${state.lang==="en"?c.en:c.hi}
 </button>`).join("");
 
-document.getElementById("catInput").innerHTML=
+catInput.innerHTML=
 categories.map(c=>`<option value="${c.id}">${c.en}</option>`).join("");
 }
 
 function toggleLang(){
 state.lang=state.lang==="en"?"hi":"en";
-document.getElementById("appLogo").innerText=
-state.lang==="en"?"Shabadam News":"शब्दम् न्यूज़";
+appLogo.innerText=state.lang==="en"?"Shabadam News":"शब्दम् न्यूज़";
 reset();
 renderCategories();
 fetchNews();
+loadBreaking();
 }
 
 function setCategory(cat){
@@ -284,7 +307,7 @@ fetchNews();
 function reset(){
 state.page=1;
 state.finished=false;
-document.getElementById("feed").innerHTML="";
+feed.innerHTML="";
 }
 
 function timeAgo(date){
@@ -298,7 +321,7 @@ return "Just now";
 }
 
 async function fetchNews(){
-if(state.loading||state.finished)return;
+if(state.loading || state.finished) return;
 state.loading=true;
 
 try{
@@ -318,6 +341,7 @@ state.loading=false;
 
 function render(articles){
 articles.forEach(a=>{
+addStructuredData(a);
 feed.innerHTML+=`
 <div class="card">
 <img src="${a.image||'https://picsum.photos/600/300'}">
@@ -337,10 +361,25 @@ ${a.title}
 }
 
 window.addEventListener("scroll",()=>{
-if(window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 150){
+if(state.loading || state.finished) return;
+if(window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 200){
 fetchNews();
 }
 });
+
+async function loadBreaking(){
+try{
+const res=await fetch(`/api/news?page=1&category=general&lang=${state.lang}`);
+const data=await res.json();
+if(data.articles?.length){
+breakingNews.innerText=data.articles.slice(0,5).map(a=>a.title).join(" • ");
+}else{
+breakingNews.innerText="";
+}
+}catch(e){
+breakingNews.innerText="";
+}
+}
 
 function shareNews(title,url){
 if(navigator.share){
@@ -367,14 +406,13 @@ closeLogin();openEditor();
 }
 
 function handleImageUpload(event){
-const file=event.target.files[0];
 const reader=new FileReader();
 reader.onload=e=>{
 uploadedImage=e.target.result;
 previewImg.src=uploadedImage;
 previewImg.style.display="block";
 };
-reader.readAsDataURL(file);
+reader.readAsDataURL(event.target.files[0]);
 }
 
 async function publishArticle(){
@@ -398,6 +436,9 @@ fetchNews();
 
 renderCategories();
 fetchNews();
+loadBreaking();
+setInterval(loadBreaking,120000);
+
 </script>
 
 </body>
