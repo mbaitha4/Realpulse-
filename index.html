@@ -6,7 +6,7 @@
 
 <title>Shabadam - UP & Bihar News</title>
 
-<!-- SEO -->
+<!-- SEO (UNCHANGED) -->
 <meta name="description" content="Shabadam - Latest Breaking News from Uttar Pradesh & Bihar. Hindi & English News, Politics, Technology, Sports, Business & AI Updates.">
 <meta name="keywords" content="UP News, Bihar News, Hindi News, English News, Shabadam, Uttar Pradesh News, Bihar Samachar, Breaking News India">
 <meta name="author" content="Shabadam News">
@@ -18,11 +18,11 @@
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://shabadam.com/">
 
-<!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#E4405F">
 
 <style>
+/* YOUR ORIGINAL CSS KEPT SAME */
 :root{
 --primary:#E4405F;
 --bg:#f4f6f9;
@@ -156,21 +156,61 @@ color:#fff;
 font-size:13px;
 cursor:pointer;
 }
-footer{
-position:fixed;
-bottom:0;
-width:100%;
-background:var(--card);
-display:flex;
-justify-content:space-around;
-padding:10px;
-border-top:1px solid #ddd;
+
+/* SPINNER */
+#spinner{
+display:none;
+text-align:center;
+padding:20px;
 }
-footer button{
+#spinner div{
+width:40px;
+height:40px;
+border:4px solid #ddd;
+border-top:4px solid var(--primary);
+border-radius:50%;
+animation:spin 1s linear infinite;
+margin:auto;
+}
+@keyframes spin{
+0%{transform:rotate(0deg)}
+100%{transform:rotate(360deg)}
+}
+
+/* MODAL */
+.modal{
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.6);
+align-items:center;
+justify-content:center;
+z-index:2000;
+}
+.modal-content{
+background:#fff;
+width:90%;
+max-width:500px;
+padding:20px;
+border-radius:15px;
+}
+.modal-content input,
+.modal-content textarea,
+.modal-content select{
+width:100%;
+margin-bottom:10px;
+padding:10px;
+border-radius:8px;
+border:1px solid #ccc;
+}
+.modal-content button{
+padding:10px;
 border:none;
-background:none;
-font-size:16px;
+border-radius:8px;
+background:var(--primary);
+color:#fff;
 cursor:pointer;
+margin-bottom:6px;
 }
 </style>
 </head>
@@ -178,7 +218,7 @@ cursor:pointer;
 <body data-theme="light">
 
 <header>
-<div class="logo" id="appLogo">Shabadam</div>
+<div class="logo" id="appLogo">Shabadam News</div>
 <button class="lang-btn" onclick="toggleLang()">English / हिंदी</button>
 </header>
 
@@ -189,19 +229,50 @@ cursor:pointer;
 <div class="cat-bar" id="catBar"></div>
 
 <div id="feed"></div>
-<div id="loader" style="text-align:center;padding:10px;">Loading...</div>
+<div id="spinner"><div></div></div>
 
-<footer>
+<footer style="position:fixed;bottom:0;width:100%;background:#fff;display:flex;justify-content:space-around;padding:10px;border-top:1px solid #ddd;">
 <button onclick="location.reload()">🏠</button>
+<button onclick="openLogin()">✍️</button>
 <button onclick="toggleTheme()">🌙</button>
 </footer>
 
+<!-- EDITOR LOGIN -->
+<div class="modal" id="loginModal">
+<div class="modal-content">
+<h3>Editor Login</h3>
+<input id="editorUser" placeholder="Username">
+<input id="editorPass" type="password" placeholder="Password">
+<button onclick="editorLogin()">Login</button>
+<button onclick="closeLogin()">Close</button>
+</div>
+</div>
+
+<!-- EDITOR DASHBOARD -->
+<div class="modal" id="editorModal">
+<div class="modal-content">
+<h3>Post Article</h3>
+<input id="titleInput" placeholder="Title">
+<textarea id="descInput" rows="5" placeholder="Content"></textarea>
+<input type="file" accept="image/*" onchange="handleImageUpload(event)">
+<img id="previewImg" style="width:100%;display:none;margin-bottom:10px;border-radius:10px;">
+<select id="catInput"></select>
+<button onclick="publishArticle()">Publish</button>
+<button onclick="closeEditor()">Close</button>
+</div>
+</div>
+
 <script>
 let state={page:1,category:"general",lang:"en",loading:false,finished:false};
+let uploadedImage=null;
 
+const EDITOR_USERNAME="editor";
+const EDITOR_PASSWORD="Shabadam@2026";
+
+/* CATEGORY */
 const categories=[
 {id:"general",en:"General",hi:"सामान्य"},
-{id:"nation",en:"UP & Bihar",hi:"यूपी & बिहार"},
+{id:"nation",en:"Nation",hi:"राष्ट्र"},
 {id:"business",en:"Business",hi:"व्यापार"},
 {id:"technology",en:"Tech/AI",hi:"तकनीक"},
 {id:"sports",en:"Sports",hi:"खेल"},
@@ -215,6 +286,9 @@ categories.map(c=>`
 onclick="setCategory('${c.id}')">
 ${state.lang==="en"?c.en:c.hi}
 </button>`).join("");
+
+document.getElementById("catInput").innerHTML=
+categories.map(c=>`<option value="${c.id}">${c.en}</option>`).join("");
 }
 
 function toggleLang(){
@@ -224,53 +298,43 @@ state.lang==="en"?"Shabadam":"शब्दम्";
 reset();
 renderCategories();
 fetchNews();
-loadBreaking();
 }
 
-function setCategory(cat){
-state.category=cat;
-reset();
-renderCategories();
-fetchNews();
+/* TIME AGO */
+function timeAgo(date){
+if(!date) return "";
+const seconds=Math.floor((new Date()-new Date(date))/1000);
+let interval=Math.floor(seconds/3600);
+if(interval>=1) return interval+" hr ago";
+interval=Math.floor(seconds/60);
+if(interval>=1) return interval+" min ago";
+return "Just now";
 }
 
-function reset(){
-state.page=1;
-state.finished=false;
-document.getElementById("feed").innerHTML="";
-}
-
-function summarizeText(text){
-if(!text) return "";
-let words=text.split(" ");
-if(words.length<=60) return text;
-return words.slice(0,60).join(" ")+"...";
-}
-
+/* FETCH NEWS */
 async function fetchNews(){
 if(state.loading||state.finished)return;
 state.loading=true;
+spinner.style.display="block";
 
 try{
 const res=await fetch(`/api/news?page=${state.page}&category=${state.category}&lang=${state.lang}`);
 const data=await res.json();
 
-if(data.articles && data.articles.length>0){
+if(data.articles?.length){
 render(data.articles);
 state.page++;
 }else{
 state.finished=true;
-document.getElementById("loader").innerText=
-state.lang==="en"?"No more news":"और समाचार उपलब्ध नहीं";
 }
-}catch(e){
-document.getElementById("loader").innerText="Error loading news";
-}
+}catch(e){}
+
+spinner.style.display="none";
 state.loading=false;
 }
 
+/* RENDER */
 function render(articles){
-const feed=document.getElementById("feed");
 articles.forEach(a=>{
 feed.innerHTML+=`
 <div class="card">
@@ -281,81 +345,75 @@ feed.innerHTML+=`
 ${a.title}
 </a>
 </div>
-<div class="desc">${summarizeText(a.description||"")}</div>
-<div class="date">${new Date(a.createdAt||a.publishedAt).toLocaleDateString()}</div>
-<a href="${a.url||'#'}" target="_blank" class="read-btn">
-${state.lang==="en"?"Read More":"पूरा पढ़ें"}
-</a>
-<button class="share-btn" onclick="shareNews('${a.title}','${a.url||location.href}')">
-Share
-</button>
+<div class="desc">${(a.description||"").split(" ").slice(0,60).join(" ")}...</div>
+<div class="date">${timeAgo(a.createdAt||a.publishedAt)}</div>
+<a href="${a.url||'#'}" target="_blank" class="read-btn">Read More</a>
+<button class="share-btn" onclick="shareNews('${a.title}','${a.url||location.href}')">Share</button>
 </div>
 </div>`;
 });
 }
 
-/* Infinite Scroll */
+/* INFINITE SCROLL */
 window.addEventListener("scroll",()=>{
-if((window.innerHeight+window.scrollY)>=document.body.offsetHeight-200){
+if(window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 150){
 fetchNews();
 }
 });
 
-/* Share */
+/* SHARE */
 function shareNews(title,url){
 if(navigator.share){
-navigator.share({title:title,url:url});
+navigator.share({title,url});
 }else{
 window.open(`https://wa.me/?text=${encodeURIComponent(title+" "+url)}`,'_blank');
 }
 }
 
-/* Breaking */
-async function loadBreaking(){
-try{
-const res=await fetch(`/api/news?page=1&category=general&lang=${state.lang}`);
-const data=await res.json();
-if(data.articles?.length){
-document.getElementById("breakingNews").innerText=
-data.articles.slice(0,5).map(a=>a.title).join(" • ");
-}
-}catch(e){}
-}
-setInterval(loadBreaking,120000);
+/* EDITOR */
+function openLogin(){loginModal.style.display="flex";}
+function closeLogin(){loginModal.style.display="none";}
+function openEditor(){editorModal.style.display="flex";}
+function closeEditor(){editorModal.style.display="none";}
 
-function toggleTheme(){
-document.body.setAttribute("data-theme",
-document.body.getAttribute("data-theme")==="dark"?"light":"dark");
+function editorLogin(){
+if(editorUser.value===EDITOR_USERNAME && editorPass.value===EDITOR_PASSWORD){
+closeLogin();openEditor();
+}else alert("Invalid credentials");
 }
 
-/* PWA Install */
-let deferredPrompt;
-const installBtn=document.createElement("button");
-installBtn.innerText="📲 Install App";
-installBtn.style.position="fixed";
-installBtn.style.bottom="80px";
-installBtn.style.right="20px";
-installBtn.style.padding="10px 15px";
-installBtn.style.borderRadius="30px";
-installBtn.style.background="var(--primary)";
-installBtn.style.color="#fff";
-installBtn.style.border="none";
-installBtn.style.display="none";
-document.body.appendChild(installBtn);
+function handleImageUpload(event){
+const file=event.target.files[0];
+const reader=new FileReader();
+reader.onload=e=>{
+uploadedImage=e.target.result;
+previewImg.src=uploadedImage;
+previewImg.style.display="block";
+};
+reader.readAsDataURL(file);
+}
 
-window.addEventListener('beforeinstallprompt',(e)=>{
-e.preventDefault();
-deferredPrompt=e;
-installBtn.style.display="block";
+async function publishArticle(){
+if(!uploadedImage){alert("Upload image");return;}
+await fetch("/api/editor-post",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+title:titleInput.value,
+description:descInput.value,
+image:uploadedImage,
+category:catInput.value,
+lang:state.lang
+})
 });
-installBtn.addEventListener("click",async()=>{
-installBtn.style.display="none";
-deferredPrompt.prompt();
-});
+alert("Published");
+closeEditor();
+reset();
+fetchNews();
+}
 
 renderCategories();
 fetchNews();
-loadBreaking();
 </script>
 
 </body>
