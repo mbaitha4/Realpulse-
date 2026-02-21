@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
     const { db } = await connectToDatabase();
 
     /* ============================= */
-    /* AUTO CLEAN (15 DAYS)         */
+    /* AUTO CLEAN 15 DAYS            */
     /* ============================= */
 
     const fifteenDaysAgo = new Date();
@@ -23,19 +23,13 @@ module.exports = async function handler(req, res) {
     });
 
     /* ============================= */
-    /* CHECK LAST FETCH PER CATEGORY */
+    /* FETCH LIVE ONLY IF EMPTY      */
     /* ============================= */
 
-    const settingKey = `gnews_${category}_${lang}`;
-    const settings = await db.collection("settings").findOne({ key: settingKey });
+    const existingCount = await db.collection("live_news")
+      .countDocuments({ category, lang });
 
-    const now = new Date();
-    const shouldFetch =
-      !settings ||
-      !settings.lastFetchedAt ||
-      (now - new Date(settings.lastFetchedAt)) > (30 * 60 * 1000);
-
-    if (shouldFetch) {
+    if (existingCount === 0 && page === 1) {
       try {
         const response = await fetch(
           `https://gnews.io/api/v4/top-headlines?category=${category}&lang=${lang}&country=in&max=10&apikey=${process.env.GNEWS_API_KEY}`
@@ -43,61 +37,43 @@ module.exports = async function handler(req, res) {
 
         const data = await response.json();
 
-        if (data.articles && data.articles.length > 0) {
-          for (const article of data.articles) {
-            const exists = await db.collection("live_news").findOne({
-              title: article.title,
-              category,
-              lang
-            });
+        if (data.articles?.length) {
+          const bulk = data.articles.map(article => ({
+            ...article,
+            category,
+            lang,
+            createdAt: new Date()
+          }));
 
-            if (!exists) {
-              await db.collection("live_news").insertOne({
-                ...article,
-                category,
-                lang,
-                createdAt: new Date()
-              });
-            }
-          }
-
-          await db.collection("settings").updateOne(
-            { key: settingKey },
-            { $set: { lastFetchedAt: new Date() } },
-            { upsert: true }
-          );
+          await db.collection("live_news").insertMany(bulk);
         }
-
       } catch (err) {
         console.log("GNews API error:", err.message);
       }
     }
 
     /* ============================= */
-    /* LOAD PAGINATED LIVE NEWS      */
+    /* MERGE USING AGGREGATION       */
     /* ============================= */
 
-    const liveNews = await db.collection("live_news")
-      .find({ category, lang })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(pageSize)
+    const articles = await db.collection("live_news")
+      .aggregate([
+        { $match: { category, lang } },
+        {
+          $unionWith: {
+            coll: "editor_news",
+            pipeline: [
+              { $match: { category, lang } }
+            ]
+          }
+        },
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: pageSize }
+      ])
       .toArray();
 
-    const editorNews = await db.collection("editor_news")
-      .find({ category, lang })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(pageSize)
-      .toArray();
-
-    // Merge current page only
-    const articles = [...editorNews, ...liveNews]
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    return res.status(200).json({
-      articles
-    });
+    return res.status(200).json({ articles });
 
   } catch (error) {
     console.log(error);
