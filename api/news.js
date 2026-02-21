@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
     const { db } = await connectToDatabase();
 
     /* ============================= */
-    /* AUTO CLEAN LIVE NEWS (15 DAYS) */
+    /* AUTO CLEAN (15 DAYS)         */
     /* ============================= */
 
     const fifteenDaysAgo = new Date();
@@ -23,10 +23,11 @@ module.exports = async function handler(req, res) {
     });
 
     /* ============================= */
-    /* CHECK LAST FETCH TIME         */
+    /* CHECK LAST FETCH PER CATEGORY */
     /* ============================= */
 
-    const settings = await db.collection("settings").findOne({ key: "gnews" });
+    const settingKey = `gnews_${category}_${lang}`;
+    const settings = await db.collection("settings").findOne({ key: settingKey });
 
     const now = new Date();
     const shouldFetch =
@@ -34,7 +35,7 @@ module.exports = async function handler(req, res) {
       !settings.lastFetchedAt ||
       (now - new Date(settings.lastFetchedAt)) > (30 * 60 * 1000);
 
-    if (shouldFetch && page === 1) {
+    if (shouldFetch) {
       try {
         const response = await fetch(
           `https://gnews.io/api/v4/top-headlines?category=${category}&lang=${lang}&country=in&max=10&apikey=${process.env.GNEWS_API_KEY}`
@@ -43,7 +44,6 @@ module.exports = async function handler(req, res) {
         const data = await response.json();
 
         if (data.articles && data.articles.length > 0) {
-
           for (const article of data.articles) {
             const exists = await db.collection("live_news").findOne({
               title: article.title,
@@ -62,38 +62,41 @@ module.exports = async function handler(req, res) {
           }
 
           await db.collection("settings").updateOne(
-            { key: "gnews" },
+            { key: settingKey },
             { $set: { lastFetchedAt: new Date() } },
             { upsert: true }
           );
         }
 
       } catch (err) {
-        console.log("GNews API failed:", err.message);
+        console.log("GNews API error:", err.message);
       }
     }
 
     /* ============================= */
-    /* LOAD LIVE + EDITOR NEWS       */
+    /* LOAD PAGINATED LIVE NEWS      */
     /* ============================= */
 
-    const live = await db.collection("live_news")
+    const liveNews = await db.collection("live_news")
       .find({ category, lang })
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(pageSize)
       .toArray();
 
-    const editor = await db.collection("editor_news")
+    const editorNews = await db.collection("editor_news")
       .find({ category, lang })
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(pageSize)
       .toArray();
 
-    const merged = [...editor, ...live]
+    // Merge current page only
+    const articles = [...editorNews, ...liveNews]
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    const paginated = merged.slice(skip, skip + pageSize);
-
     return res.status(200).json({
-      articles: paginated
+      articles
     });
 
   } catch (error) {
