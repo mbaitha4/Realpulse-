@@ -11,9 +11,9 @@ module.exports = async function handler(req, res) {
 
     const { db } = await connectToDatabase();
 
-    /* ===================================== */
-    /* AUTO CLEAN LIVE NEWS AFTER 15 DAYS   */
-    /* ===================================== */
+    /* ============================= */
+    /* AUTO CLEAN LIVE NEWS (15 DAYS) */
+    /* ============================= */
 
     const fifteenDaysAgo = new Date();
     fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
@@ -22,16 +22,17 @@ module.exports = async function handler(req, res) {
       createdAt: { $lt: fifteenDaysAgo }
     });
 
-    /* ===================================== */
-    /* CHECK LAST FETCH TIME (API LIMIT FIX) */
-    /* ===================================== */
+    /* ============================= */
+    /* CHECK LAST FETCH TIME         */
+    /* ============================= */
 
     const settings = await db.collection("settings").findOne({ key: "gnews" });
+
     const now = new Date();
     const shouldFetch =
       !settings ||
       !settings.lastFetchedAt ||
-      (now - new Date(settings.lastFetchedAt)) > (30 * 60 * 1000); // 30 mins
+      (now - new Date(settings.lastFetchedAt)) > (30 * 60 * 1000);
 
     if (shouldFetch && page === 1) {
       try {
@@ -68,13 +69,13 @@ module.exports = async function handler(req, res) {
         }
 
       } catch (err) {
-        console.log("GNews API error:", err.message);
+        console.log("GNews API failed:", err.message);
       }
     }
 
-    /* ===================================== */
-    /* MERGE EDITOR + LIVE NEWS             */
-    /* ===================================== */
+    /* ============================= */
+    /* LOAD LIVE + EDITOR NEWS       */
+    /* ============================= */
 
     const live = await db.collection("live_news")
       .find({ category, lang })
@@ -92,14 +93,11 @@ module.exports = async function handler(req, res) {
     const paginated = merged.slice(skip, skip + pageSize);
 
     return res.status(200).json({
-      articles: paginated,
-      page,
-      source: "merged"
+      articles: paginated
     });
 
   } catch (error) {
-    return res.status(500).json({
-      error: error.message
-    });
+    console.log(error);
+    return res.status(500).json({ error: error.message });
   }
 };
