@@ -12,24 +12,10 @@ module.exports = async function handler(req, res) {
     const { db } = await connectToDatabase();
 
     /* ============================= */
-    /* AUTO CLEAN 15 DAYS            */
+    /* FETCH LIVE ONLY FOR PAGE 1   */
     /* ============================= */
 
-    const fifteenDaysAgo = new Date();
-    fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
-
-    await db.collection("live_news").deleteMany({
-      createdAt: { $lt: fifteenDaysAgo }
-    });
-
-    /* ============================= */
-    /* FETCH LIVE ONLY IF EMPTY      */
-    /* ============================= */
-
-    const existingCount = await db.collection("live_news")
-      .countDocuments({ category, lang });
-
-    if (existingCount === 0 && page === 1) {
+    if (page === 1) {
       try {
         const response = await fetch(
           `https://gnews.io/api/v4/top-headlines?category=${category}&lang=${lang}&country=in&max=10&apikey=${process.env.GNEWS_API_KEY}`
@@ -38,39 +24,38 @@ module.exports = async function handler(req, res) {
         const data = await response.json();
 
         if (data.articles?.length) {
-          const bulk = data.articles.map(article => ({
-            ...article,
-            category,
-            lang,
-            createdAt: new Date()
+          const bulkOps = data.articles.map(article => ({
+            updateOne: {
+              filter: { title: article.title, category, lang },
+              update: {
+                $setOnInsert: {
+                  ...article,
+                  category,
+                  lang,
+                  createdAt: new Date()
+                }
+              },
+              upsert: true
+            }
           }));
 
-          await db.collection("live_news").insertMany(bulk);
+          await db.collection("live_news").bulkWrite(bulkOps);
         }
+
       } catch (err) {
-        console.log("GNews API error:", err.message);
+        console.log("GNews API failed:", err.message);
       }
     }
 
     /* ============================= */
-    /* MERGE USING AGGREGATION       */
+    /* PAGINATE FROM DATABASE ONLY  */
     /* ============================= */
 
     const articles = await db.collection("live_news")
-      .aggregate([
-        { $match: { category, lang } },
-        {
-          $unionWith: {
-            coll: "editor_news",
-            pipeline: [
-              { $match: { category, lang } }
-            ]
-          }
-        },
-        { $sort: { createdAt: -1 } },
-        { $skip: skip },
-        { $limit: pageSize }
-      ])
+      .find({ category, lang })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(pageSize)
       .toArray();
 
     return res.status(200).json({ articles });
