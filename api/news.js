@@ -11,17 +11,16 @@ module.exports = async function handler(req, res) {
 
     const { db } = await connectToDatabase();
 
-    const articles = await db.collection("live_news")
+    const articles = await db.collection("news_articles")
       .find({ category, lang })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(pageSize)
       .toArray();
 
-    return res.status(200).json({ articles });
+    res.status(200).json({ articles });
 
   } catch (error) {
-    console.log(error);
-    return res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 };
