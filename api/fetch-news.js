@@ -44,7 +44,7 @@ module.exports = async function handler(req, res) {
         };
       });
 
-      await db.collection("news_articles").bulkWrite(bulkOps);
+      await db.collection("live_news").bulkWrite(bulkOps);
 
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
