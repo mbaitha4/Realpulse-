@@ -5,7 +5,7 @@ module.exports = async function handler(req, res) {
   try {
     const { db } = await connectToDatabase();
 
-    const categories = ["general", "business", "sports", "technology", "nation"];
+    const categories = ["general", "nation", "sports", "technology", "miscellaneous"];
     const lang = "en";
 
     for (const category of categories) {
